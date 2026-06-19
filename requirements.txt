@@ -3,4 +3,5 @@ pillow>=10,<13
 numpy>=1.26,<3
 scikit-learn>=1.5,<2
 streamlit>=1.40,<2
-tensorflow>=2.16,<2.21
+tensorflow-cpu>=2.16,<2.21; platform_system != "Windows"
+tensorflow>=2.16,<2.21; platform_system == "Windows"

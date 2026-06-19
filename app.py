@@ -5,7 +5,12 @@ import os
 
 import streamlit as st
 
-from cnn_waste_model import analyze_with_cnn, load_cnn_model
+from cnn_waste_model import (
+    CNN_LABELS_PATH,
+    CNN_MODEL_PATH,
+    analyze_with_cnn,
+    load_cnn_model,
+)
 from local_waste_model import analyze_with_local_model, load_model
 from wastewise import (
     DEFAULT_MODEL,
@@ -100,6 +105,11 @@ def secret_value(name: str) -> str:
         return ""
 
 
+@st.cache_resource(show_spinner=False)
+def cached_cnn_model():
+    return load_cnn_model()
+
+
 def render_result(recognition: Recognition) -> None:
     advice = disposal_advice(recognition)
     confidence_percent = round(recognition.confidence * 100)
@@ -169,7 +179,7 @@ st.markdown(
 
 api_key = secret_value("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY", "").strip()
 model = secret_value("OPENAI_MODEL") or os.getenv("OPENAI_MODEL", DEFAULT_MODEL)
-cnn_model = load_cnn_model()
+cnn_available = CNN_MODEL_PATH.exists() and CNN_LABELS_PATH.exists()
 local_model = load_model()
 
 with st.sidebar:
@@ -186,7 +196,7 @@ with st.sidebar:
     st.divider()
     if api_key:
         st.caption(f"Bildmodell: {model}")
-    elif cnn_model:
+    elif cnn_available:
         st.caption("Bildmodell: MobileNetV2-CNN, lokal trainiert")
     elif local_model:
         st.caption("Bildmodell: einfache lokale Baseline")
@@ -231,7 +241,7 @@ if mode == "Foto analysieren":
         if st.session_state.get("last_image_id") != image_id:
             st.session_state.pop("last_recognition", None)
         st.image(image, caption="Dieses Bild wird analysiert.", width="stretch")
-        if not api_key and not cnn_model and not local_model:
+        if not api_key and not cnn_available and not local_model:
             st.warning(
                 "Die Bild-KI ist noch nicht eingerichtet. Trainiere das lokale "
                 "Modell oder nutze den Demo-Modus."
@@ -240,7 +250,7 @@ if mode == "Foto analysieren":
             "Abfall erkennen",
             type="primary",
             width="stretch",
-            disabled=not api_key and not cnn_model and not local_model,
+            disabled=not api_key and not cnn_available and not local_model,
         ):
             with st.spinner("Gegenstand und Material werden erkannt …"):
                 try:
@@ -251,7 +261,8 @@ if mode == "Foto analysieren":
                             api_key,
                             model,
                         )
-                    elif cnn_model:
+                    elif cnn_available:
+                        cnn_model = cached_cnn_model()
                         recognition = analyze_with_cnn(image_bytes, cnn_model)
                     else:
                         recognition = analyze_with_local_model(image_bytes, local_model)
