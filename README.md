@@ -52,6 +52,22 @@ Train the free local image classifier:
 This creates `models/waste_classifier.json`. Upload that model file to GitHub if
 you want Streamlit Cloud to run image recognition without an OpenAI API key.
 
+For a stronger real AI model, train the MobileNetV2 CNN:
+
+```powershell
+.\.venv\Scripts\python.exe train_cnn_model.py --epochs 5
+```
+
+This creates:
+
+```text
+models/waste_cnn.keras
+models/waste_cnn_labels.txt
+```
+
+Upload both files to GitHub. The app uses this CNN automatically when no
+`OPENAI_API_KEY` is configured.
+
 Create a local manifest from the dataset:
 
 ```powershell
