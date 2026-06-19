@@ -38,6 +38,34 @@ der Demo-Modus vollständig nutzbar.
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
+## Kaggle dataset
+
+The Kaggle dataset should stay local and must not be uploaded to GitHub. Put or
+extract it into `data/archive (1)/`. The repository ignores `data/` by default.
+
+Train the free local image classifier:
+
+```powershell
+.\.venv\Scripts\python.exe train_local_model.py
+```
+
+This creates `models/waste_classifier.json`. Upload that model file to GitHub if
+you want Streamlit Cloud to run image recognition without an OpenAI API key.
+
+Create a local manifest from the dataset:
+
+```powershell
+.\.venv\Scripts\python.exe evaluate_dataset.py
+```
+
+If `kagglehub` is installed and the local dataset is missing, the script can also
+download `phenomsg/waste-classification` automatically. With `OPENAI_API_KEY`
+set, a small paid API-based sample evaluation can be run:
+
+```powershell
+.\.venv\Scripts\python.exe evaluate_dataset.py --sample 20
+```
+
 ## Grenzen
 
 Der Prototyp ersetzt keine verbindliche kommunale Auskunft. Vor einem Pilottest
