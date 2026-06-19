@@ -5,6 +5,7 @@ import os
 
 import streamlit as st
 
+from local_waste_model import analyze_with_local_model, load_model
 from wastewise import (
     DEFAULT_MODEL,
     DEMO_ITEMS,
@@ -167,6 +168,7 @@ st.markdown(
 
 api_key = secret_value("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY", "").strip()
 model = secret_value("OPENAI_MODEL") or os.getenv("OPENAI_MODEL", DEFAULT_MODEL)
+local_model = load_model()
 
 with st.sidebar:
     st.header("Über den Prototyp")
@@ -180,7 +182,12 @@ with st.sidebar:
         width="stretch",
     )
     st.divider()
-    st.caption(f"Bildmodell: {model}" if api_key else "Bild-KI: nicht konfiguriert")
+    if api_key:
+        st.caption(f"Bildmodell: {model}")
+    elif local_model:
+        st.caption("Bildmodell: kostenloses lokales Kaggle-Modell")
+    else:
+        st.caption("Bild-KI: nicht konfiguriert")
 
 mode = st.segmented_control(
     "Modus",
@@ -220,25 +227,28 @@ if mode == "Foto analysieren":
         if st.session_state.get("last_image_id") != image_id:
             st.session_state.pop("last_recognition", None)
         st.image(image, caption="Dieses Bild wird analysiert.", width="stretch")
-        if not api_key:
+        if not api_key and not local_model:
             st.warning(
-                "Die echte Bild-KI ist noch nicht eingerichtet. Hinterlege "
-                "`OPENAI_API_KEY` oder nutze den Demo-Modus."
+                "Die Bild-KI ist noch nicht eingerichtet. Trainiere das lokale "
+                "Modell oder nutze den Demo-Modus."
             )
         if st.button(
             "Abfall erkennen",
             type="primary",
             width="stretch",
-            disabled=not api_key,
+            disabled=not api_key and not local_model,
         ):
             with st.spinner("Gegenstand und Material werden erkannt …"):
                 try:
-                    recognition = analyze_image(
-                        image_bytes,
-                        image.type or "image/jpeg",
-                        api_key,
-                        model,
-                    )
+                    if api_key:
+                        recognition = analyze_image(
+                            image_bytes,
+                            image.type or "image/jpeg",
+                            api_key,
+                            model,
+                        )
+                    else:
+                        recognition = analyze_with_local_model(image_bytes, local_model)
                     st.session_state["last_recognition"] = recognition
                     st.session_state["last_image_id"] = image_id
                 except (RuntimeError, ValueError) as exc:
